@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { loadEnvFile } from "node:process";
-import { TelegramClient } from "telegram";
+import { Api, TelegramClient } from "telegram";
 import { NewMessage, NewMessageEvent } from "telegram/events";
 import { StringSession } from "telegram/sessions";
 import {
@@ -22,6 +22,7 @@ function validateEnv() {
     "API_HASH",
     "GROUP_ID_TARGET",
     "BOT_USER_ID",
+    "GROUP_ID_MINE",
   ];
   for (const variable of requiredVars) {
     if (!process.env[variable]) {
@@ -39,6 +40,9 @@ const apiHash = process.env.API_HASH || "";
 const groupIDTarget = process.env.GROUP_ID_TARGET
   ? Number.parseInt(process.env.GROUP_ID_TARGET)
   : 0;
+const myGroupId = process.env.GROUP_ID_MINE
+  ? Number.parseInt(process.env.GROUP_ID_MINE)
+  : 0;
 const botUserId = process.env.BOT_USER_ID
   ? Number.parseInt(process.env.BOT_USER_ID)
   : undefined;
@@ -49,7 +53,7 @@ export const client = new TelegramClient(stringSession, apiId, apiHash, {
 });
 
 // Validate Event
-function isValidEvent(event: NewMessageEvent): boolean {
+function isValidEvent(event: NewMessageEvent) {
   const chatId = event.chatId?.toJSNumber();
   const fromId = event.message.fromId;
 
@@ -60,7 +64,7 @@ function isValidEvent(event: NewMessageEvent): boolean {
   );
 }
 
-async function downloadMedia(media: any, filePath: string) {
+async function downloadMedia(media: Api.TypeMessageMedia, filePath: string) {
   try {
     await client.downloadMedia(media, { outputFile: filePath });
   } catch (downloadError) {
@@ -75,7 +79,7 @@ async function downloadMedia(media: any, filePath: string) {
 
 async function uploadFile(filePath: string) {
   try {
-    const file = await client.sendFile(groupIDTarget, { file: filePath });
+    const file = await client.sendFile(myGroupId, { file: filePath });
     return file;
   } catch (uploadError) {
     if (uploadError instanceof Error) {
@@ -133,6 +137,11 @@ const main = async () => {
     }
 
     await client.sendMessage("me", { message: "Hello myself!" });
+
+    // client.addEventHandler(
+    //   async (event: NewMessageEvent) => {},
+    //   new NewMessage({}),
+    // );
 
     client.addEventHandler(handler, new NewMessage({}));
   } catch (mainError) {
