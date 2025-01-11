@@ -23,6 +23,7 @@ function validateEnv() {
     "GROUP_ID_TARGET",
     "BOT_USER_ID",
     "GROUP_ID_MINE",
+    "TEST_GROUP",
   ];
   for (const variable of requiredVars) {
     if (!process.env[variable]) {
@@ -46,6 +47,9 @@ const myGroupId = process.env.GROUP_ID_MINE
 const botUserId = process.env.BOT_USER_ID
   ? Number.parseInt(process.env.BOT_USER_ID)
   : undefined;
+const testGroup = process.env.TEST_GROUP
+  ? Number.parseInt(process.env.TEST_GROUP)
+  : 0;
 
 // Initialize Telegram Client
 export const client = new TelegramClient(stringSession, apiId, apiHash, {
@@ -54,16 +58,17 @@ export const client = new TelegramClient(stringSession, apiId, apiHash, {
 
 // Validate Event
 function isValidEvent(event: NewMessageEvent) {
-  const chatId = event.chatId?.toJSNumber();
+  const chatId = event.chatId?.toJSNumber
+    ? event.chatId.toJSNumber()
+    : event.chatId;
   const fromId = event.message.fromId;
 
   return (
-    chatId === groupIDTarget &&
+    chatId === myGroupId &&
     fromId?.className === "PeerUser" &&
     fromId.userId?.toJSNumber() === botUserId
   );
 }
-
 async function downloadMedia(media: Api.TypeMessageMedia, filePath: string) {
   try {
     await client.downloadMedia(media, { outputFile: filePath });
@@ -79,7 +84,7 @@ async function downloadMedia(media: Api.TypeMessageMedia, filePath: string) {
 
 async function uploadFile(filePath: string) {
   try {
-    const file = await client.sendFile(myGroupId, { file: filePath });
+    const file = await client.sendFile(testGroup, { file: filePath });
     return file;
   } catch (uploadError) {
     if (uploadError instanceof Error) {
@@ -107,7 +112,9 @@ function deleteLocalFile(filePath: string) {
 
 async function handler(event: NewMessageEvent) {
   try {
-    if (!isValidEvent(event)) return;
+    if (!isValidEvent(event)) {
+      return;
+    }
 
     const media = event.message.media;
     if (media?.className === "MessageMediaPhoto" && media.photo) {
@@ -138,10 +145,21 @@ const main = async () => {
 
     await client.sendMessage("me", { message: "Hello myself!" });
 
-    // client.addEventHandler(
-    //   async (event: NewMessageEvent) => {},
-    //   new NewMessage({}),
-    // );
+    // client.addEventHandler(async (event: NewMessageEvent) => {
+    //   const miID = (await client.getMe()).id;
+    //
+    //   // Check if the message sender is not the bot itself
+    //   if (
+    //     event.message.fromId?.className === "PeerUser" &&
+    //     event.message.fromId.userId !== miID
+    //   ) {
+    //     const chatId = event.message.chatId;
+    //
+    //     console.log(event.message.text);
+    //
+    //     console.log("Chat ID where bot will be writing:", chatId?.toJSNumber());
+    //   }
+    // }, new NewMessage({}));
 
     client.addEventHandler(handler, new NewMessage({}));
   } catch (mainError) {
