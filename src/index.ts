@@ -64,7 +64,7 @@ function isValidEvent(event: NewMessageEvent) {
   const fromId = event.message.fromId;
 
   return (
-    chatId === myGroupId &&
+    chatId === groupIDTarget &&
     fromId?.className === "PeerUser" &&
     fromId.userId?.toJSNumber() === botUserId
   );
